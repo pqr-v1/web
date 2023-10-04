@@ -10,9 +10,11 @@
     },
     "dependencies": {
         "@mercadopago/sdk-react": "^0.0.14",
-        "next": "latest",
+        "next": "^13.5.4",
         "react": "latest",
-        "react-dom": "latest"
+        "react-dom": "latest",
+        "react-icons": "^4.11.0",
+        "zustand": "^4.4.2"
     },
     "devDependencies": {
         "@types/node": "latest",
