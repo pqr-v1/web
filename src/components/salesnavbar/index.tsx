@@ -11,9 +11,15 @@ export default function SalesNavbar() {
     const [kidQuantity, setKidQuantity] = useState(0);
     const [total, setTotal] = useState(0);
 
-    const { setAmount } = useAmountStore();
+    const { setAmount, setPreferenceId } = useAmountStore();
     const adultPricing = 100;
     const kidPricing = 70;
+    const orderData = {
+        quantity: "1",
+        price: "10",
+        amount: 10,
+        description: "Some book",
+    };
 
     const handleAmount = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -21,11 +27,25 @@ export default function SalesNavbar() {
         setAmount(total);
         router.push("/payment", { scroll: false });
     };
+    const handleClick = async () => {
+        const data = await fetch(
+            `http://${process.env.NEXT_PUBLIC_BASEURL}/api`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(orderData),
+            }
+        );
+        const { id } = await data.json();
+        setPreferenceId(id);
+        router.push("/payment");
+    };
 
     useEffect(() => {
         const total = adultPricing * adultQuantity + kidPricing * kidQuantity;
         setTotal(total);
-        console.log(total);
     }, [adultQuantity, kidQuantity]);
 
     return (
@@ -91,6 +111,7 @@ export default function SalesNavbar() {
                     <p>total: {total}</p>
                     <button
                         type="submit"
+                        onClick={handleClick}
                         className="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded"
                     >
                         pagar
