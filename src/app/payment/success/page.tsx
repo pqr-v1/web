@@ -1,7 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation";
+
 import { useEffect, useState } from "react";
 import { HiOutlineCheckCircle } from "react-icons/hi2";
+
 interface IResponse {
     id: number;
     payment_method: {
@@ -19,11 +21,7 @@ interface IResponse {
 export default function Success() {
     const [transaction, setTransaction] = useState<IResponse>();
     const route = useRouter();
-    useEffect(() => {
-        const userInfo = localStorage.getItem("userInfo");
-        const parsedUserInfo = JSON.parse(userInfo!);
-        setTransaction(parsedUserInfo);
-    }, []);
+
     const redirectRoute = () => {
         route.push("/");
     };

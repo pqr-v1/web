@@ -7,32 +7,51 @@ const mercadopago = new Mercado({
 const preference = new Preference(mercadopago);
 
 export async function POST(request: Request) {
+    const {
+        name,
+        surname,
+        areaCode,
+        phone,
+        cpf,
+        email,
+        street,
+        apartment,
+        zipCode,
+        amount,
+    } = await request.json();
     const payload: PreferenceRequest = {
         items: [
             {
                 id: "1",
                 title: "ECOFOREST - Adventure Kids",
-                unit_price: 100,
+                unit_price: amount,
                 quantity: 1,
             },
         ],
         payer: {
-            name: "Marcello",
-            surname: "blablalb",
-            phone: { area_code: "92", number: "999999999" },
+            name,
+            surname,
+            phone: { area_code: areaCode, number: phone },
             identification: {
                 type: "CPF",
-                number: "11122233344",
+                number: cpf,
+            },
+            email,
+            address: {
+                street_name: street,
+                street_number: apartment,
+                zip_code: zipCode,
             },
         },
         back_urls: {
-            success: `${process.env.NEXT_PUBLIC_BASEURL}/payment/success`,
-            failure: "http://localhost:8080/feedback",
-            pending: "http://localhost:8080/feedback",
+            success: `${process.env.NEXT_PUBLIC_BASEURL}`,
+            failure: `${process.env.NEXT_PUBLIC_BASEURL}`,
+            pending: `${process.env.NEXT_PUBLIC_BASEURL}`,
         },
         auto_return: "approved",
         payment_methods: { installments: 4 },
     };
+
     const { id } = await preference.create({
         body: payload,
     });
