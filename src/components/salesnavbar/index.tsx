@@ -1,7 +1,6 @@
 "use client";
 import { useAmountStore } from "@/globalstate";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import * as Yup from "yup";
@@ -26,7 +25,7 @@ export default function SalesNavbar() {
     const {
         register,
         handleSubmit,
-        formState: { errors, isSubmitting },
+        formState: { errors },
     } = useForm<IForm>({
         mode: "all",
         resolver: yupResolver(schema),

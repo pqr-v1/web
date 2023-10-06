@@ -18,8 +18,6 @@ interface IAddress {
     erro?: string;
 }
 
-interface IPayload extends IAddress {}
-
 export default function Registration() {
     const initialData: IAddress = {
         cep: "",
@@ -120,8 +118,9 @@ export default function Registration() {
     const onChange = async (data: any) => {
         setAddress(initialData);
 
-        if (data.zipCode.length === 8) {
+        if (data.zipCode.length === 8 && address.bairro.length === 0) {
             await getZipCode(data.zipCode);
+            console.log(address);
         }
     };
 
