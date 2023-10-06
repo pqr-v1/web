@@ -7,7 +7,19 @@ const mercadopago = new Mercado({
 const preference = new Preference(mercadopago);
 
 export async function POST(request: Request) {
-    const {
+   
+    const payload = await createPreference(request)
+
+    const { id } = await preference.create({
+        body: payload,
+    });
+
+    return Response.json({ id });
+}
+
+
+async function createPreference(req: Request): Promise<PreferenceRequest> {
+     const {
         name,
         surname,
         areaCode,
@@ -18,8 +30,9 @@ export async function POST(request: Request) {
         apartment,
         zipCode,
         amount,
-    } = await request.json();
-    const payload: PreferenceRequest = {
+    } = await req.json();
+    
+    return {
         items: [
             {
                 id: "1",
@@ -48,13 +61,6 @@ export async function POST(request: Request) {
             failure: `${process.env.NEXT_PUBLIC_BASEURL}`,
             pending: `${process.env.NEXT_PUBLIC_BASEURL}`,
         },
-        auto_return: "approved",
         payment_methods: { installments: 4 },
     };
-
-    const { id } = await preference.create({
-        body: payload,
-    });
-
-    return Response.json({ id });
 }
