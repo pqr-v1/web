@@ -2,13 +2,12 @@ import Mercado, { Preference } from "mercadopago";
 import type { PreferenceRequest } from "mercadopago/dist/clients/preference/commonTypes";
 
 const mercadopago = new Mercado({
-    accessToken: process.env.NEXT_MERCADO_PAGO_ACCESS_TOKEN!,
+    accessToken: process.env.NEXT_MERCADO_PAGO_PUBLIC_KEY!,
 });
 const preference = new Preference(mercadopago);
 
 export async function POST(request: Request) {
-   
-    const payload = await createPreference(request)
+    const payload = await createPreference(request);
 
     const { id } = await preference.create({
         body: payload,
@@ -17,43 +16,30 @@ export async function POST(request: Request) {
     return Response.json({ id });
 }
 
-
 async function createPreference(req: Request): Promise<PreferenceRequest> {
-     const {
-        name,
-        surname,
-        areaCode,
-        phone,
-        cpf,
-        email,
-        street,
-        apartment,
-        zipCode,
-        amount,
-    } = await req.json();
-    
+    const data = await req.json();
     return {
         items: [
             {
                 id: "1",
                 title: "ECOFOREST - Adventure Kids",
-                unit_price: amount,
+                unit_price: data.amount,
                 quantity: 1,
             },
         ],
         payer: {
-            name,
-            surname,
-            phone: { area_code: areaCode, number: phone },
+            name: data.name,
+            surname: data.surname,
+            phone: { area_code: data.phone.area, number: data.phone.number },
             identification: {
                 type: "CPF",
-                number: cpf,
+                number: data.cpf,
             },
-            email,
+            email: data.email,
             address: {
-                street_name: street,
-                street_number: apartment,
-                zip_code: zipCode,
+                street_name: data.address.street,
+                street_number: data.address.number,
+                zip_code: data.address.zipCode,
             },
         },
         back_urls: {

@@ -1,83 +1,161 @@
 "use client";
 import { useAmountStore } from "@/globalstate";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import * as Yup from "yup";
+import { useState, useEffect } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
+import ReactInputMask from "react-input-mask";
+import { isValidCPF } from "@brazilian-utils/brazilian-utils";
 
-type IForm = {
-    name: string;
-    surname: string;
-    areaCode: string;
-    phone: string;
-    cpf: string;
-    email: string;
-    address: string;
-    apartment: number;
-    zipCode: string;
-};
-const schema = Yup.object().shape({
-    name: Yup.string().required("Nome obrigatório"),
-    surname: Yup.string().required("Sobrenome obrigatório"),
-    areaCode: Yup.string().required("Código de área obrigatório"),
-    phone: Yup.string().required("Telefone obrigatório"),
-    cpf: Yup.string().required("CPF obrigatório"),
-    email: Yup.string().required("E-mail obrigatório"),
-    address: Yup.string().required("Endereço obrigatório"),
-    apartment: Yup.number().required("Apartamento obrigatório"),
-    zipCode: Yup.string().required("CEP obrigatório"),
-});
+interface IAddress {
+    cep: string;
+    logradouro: string;
+    complemento: string;
+    bairro: string;
+    localidade: string;
+    uf: string;
+    erro?: string;
+}
+
+interface IPayload extends IAddress {}
 
 export default function Registration() {
-    const {
-        register,
-        handleSubmit,
-        formState: { errors, isSubmitting },
-    } = useForm<IForm>({
-        mode: "all",
-        resolver: yupResolver(schema),
-        defaultValues: {
-            address: "",
-            apartment: 0,
-            areaCode: "",
-            cpf: "",
-            email: "",
-            name: "",
-            phone: "",
-            surname: "",
-            zipCode: "",
-        },
-    });
+    const initialData: IAddress = {
+        cep: "",
+        logradouro: "",
+        complemento: "",
+        bairro: "",
+        localidade: "",
+        uf: "",
+    };
 
+    const [address, setAddress] = useState<IAddress>(initialData);
     const { setPreferenceId, amount } = useAmountStore();
 
     const route = useRouter();
 
-    const [name, setName] = useState("");
-    const [surname, setSurname] = useState("");
-    const [areaCode, setAreaCode] = useState("");
-    const [phone, setPhone] = useState("");
-    const [cpf, setCpf] = useState("");
-    const [email, setEmail] = useState("");
-    const [address, setAddress] = useState("");
-    const [apartment, setApartment] = useState(0);
-    const [zipCode, setZipCode] = useState("");
+    const testZipCode = async (zipCode: string | undefined) => {
+        let zip = zipCode;
+        zip = zip?.replaceAll("_", "");
+        if (!zip) return false;
+        if (zip?.length < 9) return false;
+        zip = zipCode?.replace("-", "");
 
-    const handleRegistration = async () => {
+        try {
+            const response = await fetch(
+                `https://viacep.com.br/ws/${zip}/json/`
+            );
+
+            const data: IAddress = await response.json();
+            if (data.erro) return false;
+            setAddress(data);
+            return true;
+        } catch (err: any) {
+            return false;
+        }
+    };
+    const testCpf = (cpf: string | undefined) => {
+        if (!cpf) return false;
+        if (cpf?.length < 9) return false;
+        return isValidCPF(cpf);
+    };
+
+    const cepRegExp = /^(\d{5}-\d{3}|\d{8})$/;
+    const schema = yup.object().shape({
+        name: yup.string().required("Campo obrigatório"),
+        surname: yup.string().required("Campo obrigatório"),
+        phone: yup.string().required("Campo obrigatório"),
+        cpf: yup
+            .string()
+            .test("CPF", "CPF inválido", testCpf)
+            .required("CPF obrigatório"),
+        email: yup.string().required("Campo obrigatório"),
+        zipCode: yup
+            .string()
+            .test("CEP", "CEP inválido", testZipCode)
+            .min(8, "Mínimo 8 caracteres")
+            .matches(cepRegExp, "CEP inválido")
+            .required("CEP obrigatório"),
+        number: yup.string().required(),
+        address2: yup.string().required(),
+    });
+
+    type Schema = yup.InferType<typeof schema>;
+    type SchemaWithAddress = Schema & IAddress;
+
+    const {
+        register,
+        handleSubmit,
+        setError,
+        getValues,
+        formState: { errors, isSubmitting },
+    } = useForm<Schema>({
+        mode: "all",
+        resolver: yupResolver(schema),
+        shouldFocusError: false,
+    });
+
+    const getZipCode = async (zipCode: string) => {
+        const res = await fetch(`https://viacep.com.br/ws/${zipCode}/json/`, {
+            cache: "force-cache",
+        });
+
+        const data = await res.json();
+
+        if (data.erro) {
+            setError("zipCode", {
+                type: "manual",
+                message: "CEP não encontrado",
+            });
+
+            return false;
+        }
+
+        setAddress(data);
+
+        return data;
+    };
+
+    const onChange = async (data: any) => {
+        setAddress(initialData);
+
+        if (data.zipCode.length === 8) {
+            await getZipCode(data.zipCode);
+        }
+    };
+
+    const handleRegistration = handleSubmit(async (data) => {
+        if (address?.bairro === "") {
+            setError("zipCode", {
+                type: "manual",
+                message: "CEP não encontrado",
+            });
+            return;
+        }
+        const values = { ...data, ...address } as SchemaWithAddress;
+
         const payload = {
-            name,
-            surname,
-            areaCode,
-            phone,
-            cpf,
-            email,
-            address,
-            apartment,
-            zipCode,
+            name: values.name,
+            surname: values.surname,
+            phone: {
+                area: values.phone.substring(1, 3),
+                number: +values.phone.substring(4),
+            },
+            cpf: values.cpf.replace(/[.-]/g, ""),
+            email: values.email,
+            address: {
+                zipCode: values.zipCode.replace("-", ""),
+                street: values.logradouro,
+                district: values.bairro,
+                city: values.localidade,
+                state: values.uf,
+                number: values.number,
+            },
             amount,
         };
-        const data = await fetch(
+
+        const res = await fetch(
             `http://${process.env.NEXT_PUBLIC_BASEURL}/api`,
             {
                 method: "POST",
@@ -87,16 +165,16 @@ export default function Registration() {
                 body: JSON.stringify(payload),
             }
         );
-        const { id } = await data.json();
+        const { id } = await res.json();
         setPreferenceId(id);
         route.push("/payment");
-    };
+    });
 
     return (
         <div className="flex min-w-full max-w-xs justify-center">
             <form
                 className="flex flex-col items-center  bg-white shadow-md rounded  p-8 md:w-1/3  gap-2"
-                onSubmit={handleSubmit(handleRegistration)}
+                onSubmit={handleRegistration}
             >
                 <div>
                     <label
@@ -110,13 +188,7 @@ export default function Registration() {
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                         type="text"
                         id="name"
-                        {...register("name", {
-                            required: {
-                                value: true,
-                                message: "Campo obrigatório",
-                            },
-                        })}
-                        onChange={(e) => setName(e.target.value)}
+                        {...register("name")}
                     />
                     {errors.name && (
                         <p className="text-red-600">{errors.name.message}</p>
@@ -133,61 +205,26 @@ export default function Registration() {
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                         type="text"
                         id="surname"
-                        {...register("surname", {
-                            required: {
-                                value: true,
-                                message: "Campo obrigatório",
-                            },
-                        })}
-                        onChange={(e) => setSurname(e.target.value)}
+                        {...register("surname")}
                     />
                     {errors.surname && (
                         <p className="text-red-600">{errors.surname.message}</p>
                     )}
                 </div>
-                <div>
-                    <label
-                        className="block text-gray-700 text-lg font-bold mb-2"
-                        htmlFor="areaCode"
-                    >
-                        Código de área
-                    </label>
-                    <input
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        type="text"
-                        id="areaCode"
-                        {...register("areaCode", {
-                            required: {
-                                value: true,
-                                message: "Campo obrigatório",
-                            },
-                        })}
-                        onChange={(e) => setAreaCode(e.target.value)}
-                    />
-                    {errors.areaCode && (
-                        <p className="text-red-600">
-                            {errors.areaCode.message}
-                        </p>
-                    )}
-                </div>
+
                 <div>
                     <label
                         className="block text-gray-700 text-lg font-bold mb-2"
                         htmlFor="phone"
                     >
-                        Número
+                        Fone
                     </label>
-                    <input
+
+                    <ReactInputMask
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        type="tel"
+                        mask="(99)999999999"
                         id="phone"
-                        {...register("phone", {
-                            required: {
-                                value: true,
-                                message: "Campo obrigatório",
-                            },
-                        })}
-                        onChange={(e) => setPhone(e.target.value)}
+                        {...register("phone")}
                     />
                     {errors.phone && (
                         <p className="text-red-600">{errors.phone.message}</p>
@@ -200,17 +237,12 @@ export default function Registration() {
                     >
                         CPF
                     </label>
-                    <input
+
+                    <ReactInputMask
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        type="text"
+                        mask="999.999.999-99"
                         id="CPF"
-                        {...register("cpf", {
-                            required: {
-                                value: true,
-                                message: "Campo obrigatório",
-                            },
-                        })}
-                        onChange={(e) => setCpf(e.target.value)}
+                        {...register("cpf")}
                     />
                     {errors.cpf && (
                         <p className="text-red-600">{errors.cpf.message}</p>
@@ -227,64 +259,10 @@ export default function Registration() {
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                         type="email"
                         id="email"
-                        {...register("email", {
-                            required: {
-                                value: true,
-                                message: "Campo obrigatório",
-                            },
-                        })}
-                        onChange={(e) => setEmail(e.target.value)}
+                        {...register("email")}
                     />
                     {errors.email && (
                         <p className="text-red-600">{errors.email.message}</p>
-                    )}
-                </div>
-                <div>
-                    <label
-                        className="block text-gray-700 text-lg font-bold mb-2"
-                        htmlFor="address"
-                    >
-                        Endereço
-                    </label>
-                    <input
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        type="text"
-                        id="address"
-                        {...register("address", {
-                            required: {
-                                value: true,
-                                message: "Campo obrigatório",
-                            },
-                        })}
-                        onChange={(e) => setAddress(e.target.value)}
-                    />
-                    {errors.address && (
-                        <p className="text-red-600">{errors.address.message}</p>
-                    )}
-                </div>
-                <div>
-                    <label
-                        className="block text-gray-700 text-lg font-bold mb-2"
-                        htmlFor="apartment"
-                    >
-                        Casa
-                    </label>
-                    <input
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        type="number"
-                        id="apartment"
-                        {...register("apartment", {
-                            required: {
-                                value: true,
-                                message: "Campo obrigatório",
-                            },
-                        })}
-                        onChange={(e) => setApartment(+e.target.value)}
-                    />
-                    {errors.apartment && (
-                        <p className="text-red-600">
-                            {errors.apartment.message}
-                        </p>
                     )}
                 </div>
                 <div>
@@ -294,21 +272,105 @@ export default function Registration() {
                     >
                         CEP
                     </label>
-                    <input
+                    <ReactInputMask
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        type="text"
+                        mask="99999-999"
                         id="zipcode"
                         {...register("zipCode", {
-                            required: {
-                                value: true,
-                                message: "Campo obrigatório",
-                            },
+                            onChange: () => onChange(getValues()),
                         })}
-                        onChange={(e) => setZipCode(e.target.value)}
                     />
                     {errors.zipCode && (
                         <p className="text-red-600">{errors.zipCode.message}</p>
                     )}
+                </div>
+                <div>
+                    <label
+                        className="block text-gray-700 text-lg font-bold mb-2"
+                        htmlFor="street"
+                    >
+                        Rua
+                    </label>
+                    <input
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        type="text"
+                        id="street"
+                        disabled
+                        value={address?.logradouro}
+                    />
+                </div>
+                <div>
+                    <label
+                        className="block text-gray-700 text-lg font-bold mb-2"
+                        htmlFor="neighborhood"
+                    >
+                        Bairro
+                    </label>
+                    <input
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        type="text"
+                        id="neighborhood"
+                        disabled
+                        value={address?.bairro}
+                    />
+                </div>
+                <div>
+                    <label
+                        className="block text-gray-700 text-lg font-bold mb-2"
+                        htmlFor="number"
+                    >
+                        Número
+                    </label>
+                    <input
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        type="text"
+                        id="number"
+                        {...register("number")}
+                    />
+                </div>
+                <div>
+                    <label
+                        className="block text-gray-700 text-lg font-bold mb-2"
+                        htmlFor="address2"
+                    >
+                        Complemento
+                    </label>
+                    <input
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        type="text"
+                        id="address2"
+                        {...register("address2")}
+                    />
+                </div>
+                <div>
+                    <label
+                        className="block text-gray-700 text-lg font-bold mb-2"
+                        htmlFor="cidade"
+                    >
+                        Cidade
+                    </label>
+                    <input
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        type="text"
+                        id="cidade"
+                        value={address?.localidade}
+                        disabled
+                    />
+                </div>
+                <div>
+                    <label
+                        className="block text-gray-700 text-lg font-bold mb-2"
+                        htmlFor="uf"
+                    >
+                        UF
+                    </label>
+                    <input
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        type="text"
+                        id="uf"
+                        value={address?.uf}
+                        disabled
+                    />
                 </div>
 
                 <button

@@ -43,7 +43,7 @@ export default function Home() {
                         height={720}
                     />
 
-                    <div className="flex flex-col items-center gap-5  max-w-xl p-8">
+                    <div className="flex flex-col items-center gap-5 max-w-xl p-8">
                         <h1 className="font-bold text-2xl">
                             Lorem ipsum dolor sit
                         </h1>
@@ -65,7 +65,7 @@ export default function Home() {
                         height={720}
                     />
 
-                    <div className="flex flex-col items-center gap-5  max-w-xl p-8">
+                    <div className="flex flex-col items-center gap-5 max-w-xl p-8">
                         <h1 className="font-bold text-2xl">
                             Lorem ipsum dolor sit
                         </h1>
@@ -87,7 +87,7 @@ export default function Home() {
                         height={720}
                     />
 
-                    <div className="flex flex-col items-center gap-5  max-w-xl p-8">
+                    <div className="flex flex-col items-center gap-5 max-w-xl p-8">
                         <h1 className="font-bold text-2xl">
                             Lorem ipsum dolor sit
                         </h1>
