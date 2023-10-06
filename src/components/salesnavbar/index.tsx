@@ -47,9 +47,9 @@ export default function SalesNavbar() {
 
     const handleAmount = async () => {
         console.log(errors.adultQuantity?.message);
-        // const total = adultPricing * adultQuantity + kidPricing * kidQuantity;
-        // setAmount(total);
-        // router.push("/registration", { scroll: false });
+        const total = (adultPricing * adultQuantity) + (kidPricing * kidQuantity);
+        setAmount(total);
+        router.push("/registration", { scroll: false });
     };
 
     return (

@@ -2,7 +2,7 @@
 import { useAmountStore } from "@/globalstate";
 import { initMercadoPago, Wallet } from "@mercadopago/sdk-react";
 
-initMercadoPago(`${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`);
+initMercadoPago(`${process.env.MERCADO_PAGO_PUBLIC_KEY}`);
 
 export default function PaymentPage() {
     const { amount, preferenceId } = useAmountStore();
@@ -14,7 +14,7 @@ export default function PaymentPage() {
             <Wallet
                 initialization={{
                     preferenceId,
-                    redirectMode:'modal'
+                    redirectMode:"modal"
                 }}
             />
         );

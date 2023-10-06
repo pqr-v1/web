@@ -2,7 +2,7 @@ import Mercado, { Preference } from "mercadopago";
 import type { PreferenceRequest } from "mercadopago/dist/clients/preference/commonTypes";
 
 const mercadopago = new Mercado({
-    accessToken: process.env.NEXT_PUBLIC_API_TOKEN!,
+    accessToken: process.env.NEXT_MERCADO_PAGO_ACCESS_TOKEN!,
 });
 const preference = new Preference(mercadopago);
 
