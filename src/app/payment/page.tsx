@@ -14,6 +14,7 @@ export default function PaymentPage() {
             <Wallet
                 initialization={{
                     preferenceId,
+                    redirectMode:'modal'
                 }}
             />
         );
