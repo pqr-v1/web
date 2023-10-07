@@ -154,16 +154,13 @@ export default function Registration() {
             amount,
         };
 
-        const res = await fetch(
-            `http://${process.env.NEXT_PUBLIC_BASEURL}/api`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
-            }
-        );
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASEURL}/api`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
         const { id } = await res.json();
         setPreferenceId(id);
         route.push("/payment");
